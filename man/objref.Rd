@@ -1,20 +1,23 @@
 \name{objref}
 \alias{objref}
-\alias{deref}
-\alias{print.objref}
+\alias{is.objref}
 \alias{length.objref}
+\alias{s3x_print.objref}
+\alias{s3x_as.data.frame.objref}
 \alias{$.objref}
 \alias{$<-.objref}
 \alias{[.objref}
 \alias{[<-.objref}
 \alias{[[.objref}
 \alias{[[<-.objref}
+\alias{deref}
 \title{object references}
-\description{Syntactic sugar, designed for prototyping and for writing elegant top-level algorithms, at the cost of performance. Use an environment (or ENVIRONMENT), for better performance. See package vignette for more information.}
+\description{Environment-based objects with reference-like syntax. Note that standard environments should be used, if performance is important.}
 \usage{
-objref (obj)
-deref (ref)
-\method{print}{objref}(ref, \dots)
+objref (object)
+is.objref (ref)
+\method{s3x_print}{objref}(ref, \dots)
+\method{s3x_as.data.frame}{objref}(ref, \dots)
 \method{length}{objref}(x)
 \method{$}{objref}(ref, name)
 \method{$}{objref}(ref, name) <- value
@@ -22,13 +25,15 @@ deref (ref)
 \method{[}{objref}(ref, \dots) <- value
 \method{[[}{objref}(ref, \dots)
 \method{[[}{objref}(ref, \dots) <- value
+deref (ref)
 }
 \arguments{
 \item{ref}{.}
 \item{x}{.}
 \item{name}{.}
-\item{obj}{.}
+\item{object}{.}
 \item{value}{.}
 \item{\dots}{.}
 }
+
 

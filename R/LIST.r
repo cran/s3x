@@ -1,27 +1,11 @@
-LIST = function (..., call=sys.call () )
-{	objs = list (...)
-	if (!is.cleancall (call) ) stop ("couldn't create list")
-	n = length (objs)
-	names = names (objs)
-	if (is.null (names) ) names = rep ("", n)
-	args = match.call (call=call) [-1]
-	for (i in iter (n) )
-	{	if (names [i] == "" && is.name (args [[i]]) )
-			names [i] = as.character (args [[i]])
-	}
-	names (objs) = names
-	#note, can't use extend here, causes infinite recursion
-	structure (objs, class=c ("LIST", "list") )
+LIST = function (...) extend (list (...), "LIST")
+
+s3x_print.LIST = function (object, ...)
+{	cat ("LIST\n")
+	print.default (unclass (object), ...)
 }
 
-is.LIST = function (object) inherits (object, "LIST")
+s3x_format.LIST = function (object, ...) format.default (object, ...)
 
-clone.list = function (object, ...)
-{	for (i in 1:length (object) )
-		object [[i]] = clone (object [[i]])
-	object
-}
-
-#return LIST instead of list?
-#"[.LIST" = function (obj, ...) obj [...]
+"[.LIST" = function (object, ...) extend (NextMethod (), "LIST")
 

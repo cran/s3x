@@ -1,306 +1,381 @@
 %\VignetteIndexEntry{s3x_Enhanced_S3_Programming}
-\documentclass {article}
-\usepackage {maia2}
+\documentclass{article}
+\usepackage{maia3}
 \SweaveOpts{keep.source=TRUE}
 \SweaveOpts{prefix.string=tmp-s3x}
-\definecolor{rerr}{rgb}{0.5, 0.025, 0}
-\DefineVerbatimEnvironment{Serror}{Verbatim}{xleftmargin=2em,formatcom=\color{rerr}}
-
 \begin{document}
 
 <<echo=false>>=
-options(continue=" ")
-#options(SweaveHooks=list(fig=function() par(mar=c(5.1, 4.1, 1.1, 2.1))))
+options(width=72,prompt="R> ",continue="   ")
+options(SweaveHooks=list(fig=function() par(mar=c(3.9, 4.1, 0.4, 0.1),cex=0.75)))
 library (s3x)
 @
 
-\mtitle {s3x}{0.2.0}{Enhanced S3 Programming\\(Draft)}
+\mtitle {s3x}{0.3.0}{Enhanced S3 Programming\\(Rough Draft)}
 
-\mabstract {This vignette provides an overview of the s3x package. The package builds on top of R's S3 system for object oriented programming. Major focal points include simplified constructors, enhanced functions, enhanced vectors and object references.}
+\mabstract {This vignette provides an overview of the s3x system, for enhanced S3 programming, including mixing object oriented programming with numerical programming.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Introduction}
+\section* {The S3 System}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Roughly speaking, S3 represents the third version of the R language, with S3 adding object oriented capabilities to R.
+Class-based programming is necessary to implement class-based models effectively, which in turn, is necessary for creating real-world models.
 
-Whilst S3 supports object oriented programming, standard S3 can be difficult to use. However, S3 has some redeeming features, not only does S3 support standard (class-based) object oriented programming, S3 also supports nonstandard object oriented programming, including list-based, table-based, object-functional and object-vectorised programming. This creates a number of interesting possibilities.
+The view of the author is that R's S3 system, supports a weak form of class-based programming, which is a good thing.
 
-There are three over-arching goals of the s3x package. Firstly, to simplify standard object oriented programming, with particular respect to readability. Secondly, to support a model-based development approach, where in general, models come first and programs second and it's desirable for program semantics to clearly reflect their models. Thirdly, to support both standard and nonstandard object oriented programming, such that object oriented methodology can be used to design, reformulate and implement a wide range of models encountered in computer science, computer graphics, mathematics and applied statistics.
+In many ``other'' object oriented programming systems (e.g. C++, Java and S4), classes are definitions of objects. We have to define (explicit) classes, in order to create objects. In S3, classes are descriptions of objects. We can create objects with (implicit or explicit) classes. After creating objects, we can optionally change their classes.
 
-To support these over-arching goals, the package provides the following:
+Either way, if we want to create new data-types, we must first define new classes. Many systems have a special syntax for defining classes, however S3 uses standard functions as constructors.
+
+Many systems support both class-level and object-level methods, hence we can call either:
+\begin {center} \verb|my_class (my_args)| \end {center}
+\begin {center} \verb|my_object.my_method (my_args)| \end {center}
+S3 supports generic functions and class-level methods, hence we can call either:
+\begin {center} \verb|my_generic (my_object, my_args)| \end {center}
+\begin {center} \verb|my_method.my_class (my_object, my_args)| \end {center}
+In theory, this system could be extended for multiple despatch, hence we could call either:
+\begin {center} \verb|my_generic (my_object_1, my_object_2, my_args)| \end {center}
+\begin {center} \verb|my_method.my_class_1.my_class_2 (my_object_1, my_object_2, my_args)| \end {center}
+One small problem occurs for mutator methods, where (in general) we must duplicate the object:
+\begin {center} \verb|my_object = my_generic (my_object, my_args)| \end {center}
+
+Unfortunately, S3 allows generic functions to have argument names, which restricts method argument names.
+
+In many systems, classes define (and restrict) an object's attributes. After creating an object, we can't change what attributes it has, only it's attributes' values. In S3, classes don't define (and don't restrict) an object's attributes. After creating an object, we can change what attributes it has.
+
+Other major strengths of R's S3 system include:
 \begin {enumerate}
-	\item Utility functions, extend and implant, to simplify object construction.
-	\item Enhanced lists, functions and vectors, namely\\LIST, FUNCTION and VECTOR objects, respectively.
-	\item Utility functions, for working with tabular data (namely data.frame objects).
-	\item Environment-based object references.
-	\item Copycat generics, to remove constraints on S3 method argument names.
-	\item An alternative attribute system.
-	\item A \$ operator, to access enhanced function and vector attributes.
-	\item Self-referencing, for functions to access their own attributes.
+	\item All data-types (including lists, R expressions, functions, matrices and vectors) are first class objects, hence functions can take R expressions or other functions as arguments.
+	\item All objects can have attributes.
+	\item Very strong support for lists.
+	\item Relatively strong support for numerical programming.\\Noting that specialised tasks may require foreign language implementations.
 \end {enumerate}
 
-\noindent Note that author of the s3x package is also the author of the ofp package. The original ofp package contained some of the features of this package. The current ofp package is in a transitional state and is intended to contain tools object-functional programming, such as tools for interpolation and function visualisation.
-
-Also note that the package distinguishes between three kinds of attributes, ``R attributes'' which refer to standard R attributes, ``object attributes'' which refer to any nested objects accessible via a \$ operator and ``plot attributes'' (not discussed). In this vignette, an attribute always refers to an object attribute, unless stated otherwise.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Construction Utilities}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-A typical design pattern for an R/S3 constructor, is a function that:
+Other major weaknesses with R's S3 system include:
 \begin {enumerate}
-	\item Creates an instance of the class, possibly by calling a superclass constructor.
-	\item Sets or concatenates the class attribute.
-	\item Assigns any elements/attributes, along with any associated computation.
-	\item Returns the object.
+	\item A lack of object references.
+	\item A lack of clean exception handling.
+	\item A lack of a member (or attribute) operator.
 \end {enumerate}
 
-\noindent So a superclass/subclass example might be:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {Enhanced S3 Programming}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The s3x system is built on top of R's S3 system.
+
+This package represents the culmination of several attempts to enhance R's object oriented features.
+
+Initially, the author was interested in creating a C++-like or Java-like system. Then later, she became more interested in mixing object oriented programming with functions.
+
+Then more recently, she became interested in a two-pronged approach. Firstly, mixing object-oriented programming with lists, which forms the basis for general purpose object oriented programming. Secondly, mixing object oriented programming with mathematical primitives, which forms the basis for basis for mixing object oriented programming with numerical programming.
+
+Currently, the package has five over-arching goals:
+\begin {enumerate}
+	\item To support highly readable R source code.
+	\item To support mainstream object oriented programming.
+	\item To support standard R lists and list-like syntax.
+	\item To provide enhanced primitives,\\for mixing object oriented programming with numerical programming.
+	\item To provide utilities,\\for mixing object oriented programming with numerical programming.
+\end {enumerate}
+
+The author uses the term ``enhanced primitives'', to describe top-level classes that mix object oriented features with major mathematical features. Currently, enhanced primitives include:
+\begin {enumerate}
+	\item Enhanced tables (TABLE objects), which are similar to data.frame objects.
+	\item Enhanced functions (FUNCTION objects).
+	\item Enhanced vectors (VECTOR objects).
+\end {enumerate}
+
+The main difference between standard R objects and enhanced primitives, is that enhanced primitives use an alternative attribute system. The author uses the term ``R attributes'' to describe standard R attributes and ``object attributes'' to describe named list elements and enhanced primitive attributes.
+
+Like lists, enhanced primitives, use the ``\$'' operator as an object attribute operator, to set and get their object attributes. Enhanced functions support self-referencing, where ``.\$'' maybe used within their bodies to get object attribute values. This is particularly useful for interpolated functions.
+
+Note that with the exception of lists, object attributes are stored as a standard R attribute named ``.''.
+
+Another difference between standard R objects and enhanced primitives is in subsetting. By default, for enhanced tables and enhanced vectors, single brackets, return a ``sub'' object of the same class with the same object attributes, where double brackets (which can have vectorised arguments) return components standard R vectors.
+
+In addition to enhanced primitives, the package provides the following features:
+\begin {enumerate}
+	\item General purpose object oriented features, including:
+	\begin {enumerate}
+		\item Constructor utilities.
+		\item Generic functions (redefinitions), with no named arguments.
+		\item Object references.
+	\end {enumerate}
+	\item Tabular utilities (early prototypes).
+	\item Functional utilities, including:
+	\begin {enumerate}
+		\item Smoothing (locally-weighted least squares).
+		\item Linear interpolation.
+	\end {enumerate}
+	\item Other utilities, including:
+	\begin {enumerate}
+		\item Formatted vectors.
+		\item Generic and nonrandom sampling.
+	\end {enumerate}
+\end {enumerate}
+
+Other features that are being considered for the future, include exception handling, applications programming tools (e.g. text menus), an enhanced primitive superclass, more enhanced primitives (graphs, trees, matrices and equations), 3d plots (possibly just wrappers), more tabular utilities, more smoothing, optimisation, random variables, multiple despatch and despatch for object references.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {General Purpose Object Oriented Features}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%--------------------------
+\subsection* {Constructors}
+%--------------------------
+The s3x package provides two utility functions extend and implant to simplify construction.
+
+The extend function takes an object and a subclass name, then returns the extended object. If the object has an implicit class, then it's class is set to the new class. If it an explicit class, then it's class is concatenated. The subclass name can be vectorised, however the order is the opposite to S3, superclass first, subclass second.
 <<>>=
-point = function (x=0, y=0)
-{	obj = list (x=x, y=y)
-	class (obj) = c ("point", class (obj) )
-	obj
+object = list ()
+extend (object, "myclass")
+@
+
+The implant function takes an object (with a ``\$<-'' method) and a list of object attributes, which are added to the object. The list can't include ``...''. The arguments can be named or unnamed. If unnamed, they default to the corresponding identifier.
+<<>>=
+x = 10
+y = 20
+implant (list (), x, y, z=x + y)
+@
+
+The extend function, can also except attributes, however the author recommends against this except for one line constructors.
+<<>>=
+myclass = function (x, y)
+	extend (list (), "myclass", x, y, z=x + y)
+myobject = myclass (1, 2)
+myobject
+@
+
+%-------------------------------
+\subsection* {Generic Functions}
+%-------------------------------
+The current version of this package, redefines all generics from the base and graphics packages. They simply call the standard versions. This may be modified in future versions.
+<<>>=
+print
+@
+
+After loading this package, we can write methods (say print.myclass) that don't require the argument to be named ``x''.
+
+%--------------------------------
+\subsection* {Object Referencing}
+%--------------------------------
+Environments can be used to support object referencing, however this produces slightly verbose and confusing syntax.
+
+The package provides objref objects to emulate traditional object references.
+
+An object reference is created via the objref function and dereferenced via the deref function.
+<<>>=
+ref = objref (1:3)
+ref
+deref (ref)
+@
+
+Currently, there are some limitations and performance issues with these objects, which will hopefully be fixed in the near future.
+
+The main limitation relates to method despatch, which should (however isn't) be determined by the class of the referenced object. Another limitation, is that there's no direct support for changing what a reference, references.
+
+A few methods are defined, such \$ and bracket operators, which apply to the referenced object.
+
+The following example illustrates typical reference behaviour, where changes to a referenced object are reflected in another reference
+<<>>=
+duplicate = ref
+ref [1] = 0
+deref (duplicate)
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {Enhanced Vectors}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Enhanced vectors (VECTOR objects) are the simplest of all enhanced primitives.
+
+We can create an enhanced vector and assign attributes to it, which is particularly useful for representing measurements along with units.
+
+Enhanced vectors are created from standard vectors (or any object that can be coerced to a standard vector).
+
+Simple example based on the cars dataset (which is imperial).
+<<>>=
+#a speed object
+speed = VECTOR (cars$speed)
+speed$unit = "mph"
+speed
+speed$unit
+@
+
+<<>>=
+#a distance object
+distance = VECTOR (cars$dist)
+distance$unit = "ft"
+distance
+distance$unit
+@
+
+A subtle difference between standard vectors and enhanced vectors is that subsetting via single brackets returns an object with a copy of the original object's attributes and that subsetting via double brackets returns a standard vector (including potentially more than one element).
+<<>>=
+distance [1:10]
+distance [[1:10]]
+@
+
+Note that when we perform arithmetic operations that involve two enhanced vectors or an enhanced vector an another object, in general, the resulting object will have the first object's class and attributes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {Enhanced Tables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Enhanced tables (TABLE objects) are early prototypes and should be used cautiously.
+
+Currently, enhanced tables are created from lists (or list subclasses) and offer little data validation.
+
+Like data.frames, enhanced tables extend standard lists, with each list element corresponding to a column. However unlike data.frames, by default attributes aren't stripped and the \$ operator accesses object attributes rather than list elements.
+<<>>=
+#table with attributes
+table = TABLE (cars)
+table$unit_speed = "mph"
+table$unit_distance = "ft"
+table [1:10,]
+table$unit_speed
+
+#like enhanced vectors, double brackets are used to access the elements
+table [["speed"]]
+#or
+table [[,"speed"]]
+@
+
+We can access all attributes, use the objattr function.
+<<>>=
+objattr (table)
+@
+
+Utility functions are still being designed:
+<<>>=
+summary (table)
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {Enhanced Functions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Enhanced functions (FUNCTION objects) provide the same extension for attributes, except that they also support self-referencing (read only). Currently, there's a bug in the print method.
+
+<<>>=
+straight_line = function (intercept, slope)
+{	f_seed = function (x) .$intercept + .$slope * x
+	f = FUNCTION (f_seed)
+	f$intercept = intercept
+	f$slope = slope
+	f
 }
+
+f1 = straight_line (0, 1)
+f2 = straight_line (1, 2)
+f1
+objattr (f1)
+f1 (1:4)
+f2 (1:4)
 @
 
-<<>>=
-circle = function (x=0, y=0, r=1)
-{	obj = point (x, y)
-	class (obj) = c ("circle", class (obj) )
-	obj$r = r
-	obj
-}
+It's possible to specify an xlim argument in the enhanced function constructor. If we don't and we want to plot our functions, then we must include it in the plot functions.
+\begin {center}
+<<fig=TRUE, width=4.5, height=2.5>>=
+plot (f1, xlim=c (-5, 5) )
+lines (f2, lty=2, xlim=c (-5, 5) )
 @
+\end {center}
 
-\noindent In theory this is fine. However, as one of the over-arching goals of this package is simplicity, the author feels that object construction should be more succinct. Hence, the s3x package provides the utility functions extend and implant.
-
-Extend takes two or more arguments. The first argument is a seed object (to be extended), the second argument is the name of the subclass. The remaining arguments are the object attributes (re-iterating that the term object attribute has a special meaning the s3x package). For object's without an explicit class attribute (such as vectors), extend will set the class to the subclass. For object's with an explicit class attribute (such as data.frame(s) ), extend will concatenate the class. Extend produces an error, if ``...'' is included in the call. The arguments can be named or unnamed. If unnamed, they default to the corresponding identifier (i.e. in the following above, an object attribute named ``x'' is created and assigned the value of x). Extend returns the object.
-
-This allows a single call, to set an object's class and assign attributes.
-The above example can be rewritten as:
-<<>>=
-point = function (x=0, y=0) extend (list (), "point", x, y)
-circle = function (x=0, y=0, r=1) extend (point (x, y), "circle", r)
-@
-
-<<>>=
-circle (10, 10, 2.5)
-@
-
-\noindent Implant is the same, except that there's no subclass argument. A point object (without setting the class) could be created as follows:
-<<>>=
-point = function (x=0, y=0) implant (list (), x, y) 
-@
-
-\noindent Note that extend and implant are mostly restricted to ``s3x-like'' objects. An s3x-like object can be regarded as any object, where a \$ operator can be used to set named elements of that object.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Enhanced Primitives}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Enhanced primitives are (quite pretentiously) extended versions of R's standard primitives and include enhanced lists, functions and vectors. They are same as standard primitives, except that:
-\begin {enumerate}
-	\item They have a capitalised class attribute, namely LIST, FUNCTION or VECTOR.
-	\item Enhanced lists and vectors have the same constructor arguments as standard lists and vectors, however enhanced functions are created using a somewhat different syntax.
-	\item A copycat generic system is used, so\\print.LIST calls s3x\_print, which by default, calls s3x\_print.LIST.\\This adds computational overhead, however removes constraints on S3 method argument names.
-    \item Enhanced functions and vectors, have an alternative attribute system, with a \$ operator defined.
-	\item Enhanced function support self-referencing, currently read-only, so a function can (within the function body) access it's own attributes.
-\end {enumerate}
-
-\noindent Enhanced tables (possibly extended data.frame objects) and rational types are being considered for the future. Note the following changes from earlier versions:
-\begin {enumerate}
-	\item Constructors no longer support attributes, however one can still use extend or implant.
-	\item Mask generics, were removed.
-	\item Enhanced functions, no longer use environments.
-	\item Enhanced vectors, no longer have subclasses.
-\end {enumerate}
-
-\noindent A discussion of function and vector attribute implementation issues are given in Appendix B. The vector subclasses were removed because many R features automatically change vector types (say from integer to numeric) and it's very difficult for subclasses support such changes.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Enhanced Functions and Vectors}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Enhanced functions and enhanced vectors, support mixing object oriented programming with functional and vectorised programming. The general idea is that, one creates an object (say a function), does object oriented things with it (constructs it, extends it, gives it methods and attributes) and also does mathematical things with it (for a function, evaluate it, directly).
-
-Trivial function example:
-<<>>=
-f.seed = function () 1
-f = implant (FUNCTION (f.seed), my.name="trivial example")
-f$my.name
-f ()
-@
-
-\noindent More sophisticated function example (interpolation of two values, given a value between zero and one):
-<<>>=
-interpolator = function (a, b)
-{	f.seed = function (x) .$a + x * .$interval
-	implant (FUNCTION (f.seed), a, interval = b - a)
-}
-@
-
-<<>>=
-f = interpolator (10, 12)
-f
-@
-
-<<>>=
-f (0.25)
-f (0.75)
-@
-
-\noindent If we want, we can get a copy of the object attributes:
-<<>>=
-objattr (f)
-@
-
-
-\noindent Simple vector example:
-<<>>=
-#simple distance class, no validation
-distance = function (x, unit="m")
-	extend (VECTOR (x), "distance", unit)
-print.distance = function (x)
-{	print (as.vector (x) )
-	cat ("unit =", x$unit)
-}
-@
-
-<<>>=
-#prototype conversion function
-in.mm = function (x)
-{	if (x$unit == "m") {x = x * 1000; x$unit="mm"}
-	else stop ("unsupported unit")
-	x
-}
-@
-
-<<>>=
-d = distance (25)
-d
-in.mm (d)
-@
-
-\noindent Note that arithmetic operations on two enhanced vectors, generally return an object with the class and attributes of the first vector.
+Note that if a function $f$ calls a function $g$, $g$ doesn't automatically have access to $f$'s attributes. The object $.$ is a named list of attributes, which needs to be given to $g$ as an argument, for $g$ to use those attributes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Tabular Data Utilities}
+\section* {Tabular Utilities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The function, read\_package\_data, can be used to create an enhanced table from a package dataset. Another function, read\_data\_file can be used read other data files. These functions call read.table, however have different defaults. Refer to the man file for more info.
 
-The function, read.package.data, can be used to create a data.frame from a package dataset. Another function, read.data.file can be used read other data files. These functions call read.table, however have different defaults. Refer to the man file for more info.
+Note that the print method for table, converts the table to a data.frame. This may be changed in future versions.
+<<>>=
+table = read_package_data ("rrv", "markowitz.csv")
+print (table, 1, row.names=FALSE)
+@
 
-The samp function produces non-random samples for table-based objects and vectors. This is particularly useful to printing a snippet of a dataset in a vignette or other article. For table-based objects it returns the first n and last m rows, for vectors, the first n elements and last m elements. By default, n=3 and m=n. Using the cars dataset (comes with R).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section* {Functional Utilities}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%-----------------------
+\subsection* {Smoothing}
+%-----------------------
+The function lps, fits local polynomials, via locally-weighted least squares.
+
+The function lps\_series, is a wrapper, that takes $x$ and $y$ values and returns a series of length $n$.
+
+By default, the polynomials are quadratic and have a smoothness parameter (relative bandwidth) equal to one (actual bandwidth = smoothness * diff (range ($x$) ) ).
+
+\begin {center}
+<<fig=TRUE, width=4.5, height=2.5>>=
+m = lps_series (trees$Height, trees$Volume, degree=1, smoothness=2, n=5)
+plot (trees$Height, trees$Volume)
+lines (m)
+@
+\end {center}
 
 <<>>=
-samp (cars)
-samp (cars, 3, 1)
-samp (cars, 1)
+m
+@
+
+%---------------------------
+\subsection* {Interpolation}
+%---------------------------
+Univariate linear interpolation (for both regularly spaced and irregularly spaced series) can be achieved via the interpolate function. The function takes an $x$ vector and a $y$ vector, with the restriction that the $x$ vector is distinct sorted values, in ascending order, then given a new set of $x$ values (sometimes denoted $u$), the interpolated values $v$ are computed.
+<<>>=
+x = c (1:2, 4:5)
+y = x^2
+f = interpolate (x, y)
+@
+
+We can plot the function, along with the series.
+\begin {center}
+<<fig=TRUE, width=4.5, height=2.5>>=
+plot (f, points=TRUE)
+@
+\end {center}
+
+%-------------------------------------------
+\subsection* {Mixed Smoothing-Interpolation}
+%-------------------------------------------
+The lps\_interpolate function is the same as the lps\_series function, except that it returns an interpolated function. Evaluating the function, yields fitted values.
+\begin {center}
+<<fig=TRUE, width=4.5, height=2.5>>=
+f = lps_interpolate (trees$Height, trees$Volume, degree=1, smoothness=2, n=5)
+plot (trees$Height, trees$Volume)
+lines (f)
+abline (v=85, h=f (85), lty=2)
+@
+\end {center}
+
+<<>>=
+#f (20)
 @
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Object Referencing}
+\section* {Other Utilities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Whilst environments can be used directly, to support object referencing, this approach isn't discussed here. Instead we shall consider objref objects, which are extended environments, intended to mimic traditional object references. These objects aren't intended for high performance programs (standard environments should be used instead), they're intended purely for simplicity.
-
-An object reference is created via the objref function. Various methods are defined, such as print, \$ and bracket operators, Many of these apply to the referenced object. The object can be dereferenced using deref.
+%-------------------------------
+\subsection* {Formatted Vectors}
+%-------------------------------
+The vector\_style class, can be used to format integer and numeric vectors, it provides commas and potentially currency symbols.
 <<>>=
-#a reference
-ref1 = objref (1:3)
-ref1
-deref (ref1)
+x = 10e6 * rnorm (10)
+vector_style (x)
+vector_style (x, 0, currency="$")
 @
 
+%------------------------------
+\subsection* {Generic Sampling}
+%------------------------------
+
+The sample function is redefined as a generic.
+
+The enhanced table method calls sample\_deterministic, which gives the first n rows and last m rows, by default the first three and last three.
 <<>>=
-#another reference
-ref2 = ref1
-ref2
-deref (ref2)
+sample (table)
+sample (table, 4)
+sample (table, 2, 1)
 @
 
-<<>>=
-#as both refer to same object, a modification in ref1's object is reflected in ref2
-ref1 [1] = 0
-ref1 [1]
-ref2 [1]
-@
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {Copycat Generics}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-In R, a generic system is used for method despatch. Whilst this is considerably different from many other object oriented languages, the system is both convenient and effective.
-
-A problem developing R packages is that R's generic system, places restrictions on S3 method argument names. A major example is print, which requires that the first argument is named x. This is problematic because we may wish to name our argument something else. 
-
-A number of workarounds have been considered. Previously, a masking system was used. The current approach uses a combination of copycat generics (e.g. s3x\_print instead of print) and bridge functions, where a method (for the standard generic) calls the s3x generic.
-
-Enhanced lists, have a print.LIST method. Calling print (with an enhanced list) calls print.LIST. Unlike a standard print method, this method simply calls s3x\_print, which then calls s3x\_print.LIST (or potentially a subclass method).
-
-A full list of copycat generics and bridge functions is given in Appendix A.
-
-Note that not all bridge functions have default methods associated with them. Enhanced lists also have a plot.LIST method that calls s3x\_plot. As no default method is implemented, trying to plot an enhanced list will produce an error (unless a subclass provides a suitable method).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {\begin {center} Appendix A:\\Copycat Generics and Bridge Functions\end {center} }
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Currently, the s3x package contains the following copycat generics (aka s3x generics):
-\begin {itemize}
-	\item s3x\_print
-	\item s3x\_format
-	\item s3x\_as.data.frame
-	\item s3x\_plot
-	\item s3x\_lines
-	\item s3x\_points
-\end {itemize}
-
-\noindent Currently, the s3x package contains the following bridge functions (grouped by class):
-\begin {itemize}
-	\item print.LIST
-	\item format.LIST
-	\item plot.LIST
-	\item lines.LIST
-	\item points.LIST
-	\item print.FUNCTION
-	\item format.FUNCTION
-	\item plot.FUNCTION
-	\item lines.FUNCTION
-	\item points.FUNCTION
-	\item print.VECTOR
-	\item as.data.frame.VECTOR
-	\item print.objref
-	\item as.data.frame.objref
-\end {itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\msec {\begin {center} Appendix B:\\Function and Vector Attribute Implementation Issues \end {center} }
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Whilst R already allows a programmer to give an object, attributes, via the attributes and attr functions, the author has two concerns with the standard approach. Firstly, many R features automatically assign (or change) these attributes, hence, if a programmer decides that object X, should have attributes A and B, the actual object may have further attributes, say dim. Secondly, setting and accessing attributes, via attributes or attr is verbose.
-
-For lists (R's general purpose objects), we can ignore these problems and implement an object's attributes as it's elements.
-
-For (enhanced) functions and vectors, an R attribute ``.'' is defined when the object is created and assigned an empty list. Object attributes are implemented as elements of that list. A function, objattr, can be used to get a copy of the entire list. Plus a \$ operator is defined to allow setting and accessing those attributes.
-
-It's convenient for functions (that is, their bodies) to be able to access their own attributes.
-
-The simplest way this can be achieved, is by setting a function's environment (generally to a new environment) and assigning values to that environment. An alternative approach, is for a function to access standard attributes or  ``.'').
-
-Originally, the author used the first approach, however she had some concerns:
-\begin {enumerate}
-	\item A simple assignment, say f=g, results in a mixed copy-by-value and copy-by-reference result.\\In most respects, function f is a copy of function g, hence modifying f's body or formal arguments, doesn't effect g. However, f's environment is the same as g's, hence whilst changes to f's body don't effect g, changes to it's environment will.
-	\item As standard R programming, uses copy-by-value, the use of environments, can be confusing.
-	\item Where a function's attribute, has the same name as another function, errors (which are not always obvious) can be produced.
-\end {enumerate}
-
-\noindent Later, she changed to the second approach. When a function is created, a line is inserted into the seed function's body, to create a self reference object, also called ``.''. The self reference is simply a copy of the function's attributes. This approach isn't perfect:
-\begin {enumerate}
-	\item If function f wishes to call function g and g needs access to f's attributes, then f needs to call g, with ``.'' as an argument.
-	\item If a function wished to modify it's own attributes, there may be a substantial computational cost.
-	\item There's some increased computation cost,\\however for highly vectorised implementations, this cost should be negligible.
-\end {enumerate}
-
-\noindent Currently, function's can't set their attributes, only access them.
+The default method and a sample\_random function, call the standard sample function.
 
 \end{document}
 

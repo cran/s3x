@@ -8,10 +8,10 @@ objref = function (object)
 is.objref = function (ref) inherits (ref, "objref")
 length.objref = function (x) length (deref (x) )
 
-s3x_print.objref = function (ref, ...)
+print.objref = function (ref, ...)
 	cat ("objref ->", class (deref (ref) ) [[1]], "\n")
 
-s3x_as.data.frame.objref = function (ref, ...)
+as.data.frame.objref = function (ref, ...)
 	as.data.frame (deref (ref) )
 
 "$.objref" = function (ref, name)

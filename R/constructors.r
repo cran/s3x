@@ -13,9 +13,8 @@
 
 extend = function (object, subclass, ..., attributes)
 {	superclass = attr (object, "class")
-	if (length (subclass) != 1) stop ("extend subclass must be scalar")
 	if (inherits (object, subclass) ) stop ("can't re-extend class")
-	class (object) = c (subclass, superclass)
+	class (object) = c (rev (subclass), superclass)
 	if (missing (attributes) )
 	{	attributes = list (...)
 		if (length (attributes) == 0)
@@ -57,9 +56,10 @@ implant = function (object, ..., attributes)
 .withoutdots = function (call=sys.call (-1) )
 {	clean = TRUE
 	n = length (call)
-	for (i in enumv (n, 2) )
-		if (as.character (call [i]) == "...")
-			clean = FALSE
+	if (n > 1)
+		for (i in 1:n)
+			if (as.character (call [i]) == "...")
+				clean = FALSE
 	clean
 }
 
@@ -71,4 +71,5 @@ implant = function (object, ..., attributes)
 		call [-i]
 	}
 }
+
 

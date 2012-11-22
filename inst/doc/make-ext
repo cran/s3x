@@ -1,9 +1,0 @@
-bldcmd=R CMD Sweave
-
-s3x.pdf: s3x.tex maia3.sty
-	pdflatex s3x.tex
-
-s3x.tex: s3x.rnw
-	$(bldcmd) s3x.rnw
-
-

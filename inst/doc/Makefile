@@ -1,15 +1,12 @@
 default:
-	make -f make-ext
+	make standard
 	make clean
 
-enhanced:
-	make -f make-ext bldcmd=makesweave
+standard:
+	make s3x.pdf
 
-init:
-	rm -f /tmp/makesweavepipe
-	mkfifo /tmp/makesweavepipe
-	echo -e "0\n" > /tmp/makesweavestatus
-	makesweave -i &
+s3x.pdf: maia4.sty s3x.tex
+	pdflatex s3x.tex
 
 clean:
 	rm -f *.tex

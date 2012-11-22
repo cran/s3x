@@ -1,5 +1,5 @@
-FUNCTION = function (f, ..., xlim=NULL, ylim=NULL, zlim=NULL)
-{	if (!is.function (f) )
+FUNCTION = function (f, ..., xlim=NULL, ylim=NULL)
+{	if (! is.function (f) )
 		stop ("FUNCTION requires function")
 	f = .modifyf (f)
 	attributes (f) = NULL
@@ -7,16 +7,16 @@ FUNCTION = function (f, ..., xlim=NULL, ylim=NULL, zlim=NULL)
 	attr (f, ".") = list ()
 	f$xlim = xlim
 	f$ylim = ylim
-	f$zlim = zlim
 	f
 }
 
 is_FUNCTION = function (object)
 	inherits (object, "FUNCTION")
 
+#error
 print.FUNCTION = function (f, ...)
 {	cat (format (f), "\n")
-	k = as.character (body (f) )
+	k = as.character (body (as.function (f) ) )
 	cat ("{ ", k [3], "\n")
 	n = length (k)
 	if (n > 3)
@@ -24,24 +24,6 @@ print.FUNCTION = function (f, ...)
 			cat ("  ", k [i], "\n")
 	cat ("}\n")
 	.printattr (f)
-}
-
-plot.FUNCTION = function (f, ..., xlim=f$xlim, ylim=f$ylim, xlab="x", ylab="f(x)", n=200)
-{	if (is.null (xlim) )
-		stop ("plot.FUNCTION requires xlim")
-	x = seq (f, n=n, xlim=xlim)
-	y = f (x)
-	if (is.null (ylim) )
-		ylim = range (y, na.rm = TRUE)
-	plot (x, y, type="l", xlim=xlim, ylim=ylim, xlab=xlab, ylab=ylab, ...)
-}
-
-lines.FUNCTION = function (f, ..., xlim=f$xlim, n=200)
-{	if (is.null (xlim) )
-		stop ("lines.FUNCTION requires xlim")
-	x = seq (f, n=n, xlim=xlim)
-	y = f (x)
-	lines (x, y, ...)
 }
 
 format.FUNCTION = function (f, ...)
@@ -52,6 +34,13 @@ format.FUNCTION = function (f, ...)
 
 seq.FUNCTION = function (f, ..., xlim=f$xlim, n=30)
 	seq (xlim [1], xlim [2], length=n)
+
+"$.FUNCTION" = function (f, name) attr (f, ".") [[name]]
+
+"$<-.FUNCTION" = function (f, name, value)
+{	attr (f, ".") [[name]] = value
+	f
+}
 
 .modifyf = function (f)
 {	g = list ()
@@ -67,4 +56,16 @@ seq.FUNCTION = function (f, ..., xlim=f$xlim, n=30)
 	body (f) = as.call (g)
 	f
 }
+
+.printattr = function (object)
+{	k = names (attr (object, ".") )
+	if (length (k) > 0)
+	{	cat ("object attributes:\n")
+		cat (paste (k, collapse=", "), "\n")
+	}
+}
+
+
+
+
 
